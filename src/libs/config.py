@@ -15,43 +15,52 @@ class Config:
     # dataset関連
     dataset_dir : str = "../SummarizationDataset"
     
+    feats_dir : str = "fps_sampling=1-batch_size=128-img_size=224-out_features=6-lr=0.0001-loss_fn=ib_focal-max_epoch=20-aug_ver=1"
+    
     fps_sampling : int = 1
     
     fps_sampling_test : int = 1
     
-    val_vid_idx : int = 1
+    val_vid_idx = [1,2,3,4,5]
     
+    batch_size: int = 1024
+    
+    img_size : int = 256
+    
+    # model関連
     model_name: str = "resnet50d"
+    
+    out_features : int = 6
     
     pretrained : bool = True
     
-    encoder_name : str = "timm-resnest26d"
-    
-    lr: float = 0.003
+    lr: float = 0.001
     
     lr_min : float = 1e-6
     
-    weight_decay : float = 1e-6
+    weight_decay : float = 1e-5
 
-    loss_fn: str = "dice_loss"
+    loss_fn: str = "ce_loss"
 
-    batch_size: int = 1024
-
-    num_workers: int = 2
+    num_workers: int = 4
 
     model_path: str = ""
 
-    devices : int = 2
+    devices : int = 1
 
-    callbacks = ["ckpt", "prog_bar", "lr_monitor", "timer"]
+    callbacks = ["ckpt", "timer", "lr_monitor"]#["ckpt", "prog_bar", "lr_monitor", "timer"]
+    
+    monitor : str = 'val_acc'
+    
+    ckpt_mode : str = 'max'
 
     max_epoch: int = 20
 
-    min_epoch: int = 10
+    min_epoch: int = 5
     
-    img_size : int = 384
+    aug_ver : int = 1
     
-    aug_ver : int = 2
+    mode : str = 'fit' #extract, fit_extract
     
 
     def __post_init__(self) -> None:

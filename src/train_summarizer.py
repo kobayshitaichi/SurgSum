@@ -10,8 +10,8 @@ import numpy as np
 from libs.config import get_config
 from libs.seed import set_seed
 from libs.create_dataframe import get_dataframe
-from libs.datamodule import ExtractorDataModule
-from libs.litmodule import ExtractorLitModule
+from libs.datamodule import ExtractorDataModule, SumDataModule
+from libs.litmodule import ExtractorLitModule, SumLitModule
 from libs.callbacks import get_callbacks
 from libs.loss_fn import get_criterion
 from libs.models import get_model
@@ -84,13 +84,11 @@ def main():
     net = get_model(config)
     callbacks = get_callbacks(result_path, config.callbacks, config)
     
-    df = get_dataframe(config)
-    dm = ExtractorDataModule(df, config)
+    dm = SumDataModule(config)
     dm.setup()
-    dm.test_data.df.to_csv(os.path.join(result_path,"processed_df.csv"), index=False)
-    loss_fn = get_criterion(loss_fn=config.loss_fn, config=config, weight=dm.phase_weight)
+    loss_fn = get_criterion(loss_fn=config.loss_fn, config=config, weight=None)
     
-    lm = ExtractorLitModule(config=config, model=net, loss_fn=loss_fn)
+    lm = SumLitModule(config=config, model=net, loss_fn=loss_fn)
     
     if args.use_wandb:
         logger = [WandbLogger(
@@ -115,20 +113,20 @@ def main():
         callbacks=callbacks,
         profiler="simple",
     )
-    
-    if config.mode == "fit":
-        trainer.fit(model=lm, datamodule=dm)
+    trainer.fit(model=lm, datamodule=dm)
+    # if config.mode == "fit":
+    #     trainer.fit(model=lm, datamodule=dm)
         
-    elif config.mode == "extract":
-        lm = lm.load_from_checkpoint(os.path.join(result_path,"last.ckpt"),config=config, model=net, loss_fn=loss_fn)
-        trainer.test(model=lm, datamodule=dm)
-        np.save(os.path.join(result_path,'features.npy'), lm.features)
-        np.save(os.path.join(result_path,'preds.npy'), lm.preds)
-    else:
-        trainer.fit(model=lm, datamodule=dm)
-        trainer.test(model=lm, datamodule=dm)
-        np.save(os.path.join(result_path,'features.npy'), lm.features)
-        np.save(os.path.join(result_path,'preds.npy'), lm.preds)
+    # elif config.mode == "extract":
+    #     lm = lm.load_from_checkpoint(os.path.join(result_path,"last.ckpt"),config=config, model=net, loss_fn=loss_fn)
+    #     trainer.test(model=lm, datamodule=dm)
+    #     np.save(os.path.join(result_path,'features.npy'), lm.features)
+    #     np.save(os.path.join(result_path,'preds.npy'), lm.preds)
+    # else:
+    #     trainer.fit(model=lm, datamodule=dm)
+    #     trainer.test(model=lm, datamodule=dm)
+    #     np.save(os.path.join(result_path,'features.npy'), lm.features)
+    #     np.save(os.path.join(result_path,'preds.npy'), lm.preds)
 
 
 if __name__ == "__main__":

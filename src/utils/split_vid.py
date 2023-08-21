@@ -22,6 +22,8 @@ def videos_to_imgs(output_path='',input_path='',pattern='*mp4',fps=30,start_vide
     for i, vid_path in enumerate(tqdm(dirs)):
         file_name = vid_path.stem
         out_folder = output_path / file_name
+        if os.path.exists(out_folder):
+            continue
         out_folder.mkdir(exist_ok=True)
         os.system(
             f'ffmpeg -i {vid_path} -vf "scale=250:250, fps=30" {out_folder/file_name}_%6d.png '

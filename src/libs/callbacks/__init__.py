@@ -18,6 +18,7 @@ logger = getLogger(__name__)
 def get_callbacks(
     result_path="",
     callbacks: list = [],
+    config = None
 ) -> None:
     callbacks_all = []
     for callback in callbacks:
@@ -35,9 +36,9 @@ def get_callbacks(
             checkpoint_callback = ModelCheckpoint(
                 dirpath=result_path,
                 filename="final_model",
-                monitor="val_dice",
+                monitor=config.monitor,
                 save_last=True,
-                mode="max",
+                mode=config.ckpt_mode,
             )
             callbacks_all.append(checkpoint_callback)
 
@@ -64,7 +65,7 @@ def get_callbacks(
             callbacks_all.append(timer)
 
         else:
-            message = "loss function not found"
+            message = "callbacks not found"
             logger.error(message)
             raise ValueError(message)
 

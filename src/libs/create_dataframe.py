@@ -16,9 +16,10 @@ def get_dataframe(config):
 
         tmp['video_idx'] = int(file_name[-2:])  
         img_path = os.path.join(config.dataset_dir, 'video_split', file_name)
+        tmp = tmp.iloc[:min(len(os.listdir(img_path)), len(tmp))]
         tmp['file_name'] = sorted(os.listdir(img_path)[:len(tmp)])
         
-        if config.val_vid_idx == int(file_name[-2:]):
+        if int(file_name[-2:]) in config.val_vid_idx:
             tmp['stage'] = 'val'
             factor = int(30 / config.fps_sampling_test)
         else:
@@ -29,3 +30,4 @@ def get_dataframe(config):
         all_df = pd.concat([all_df, tmp], axis=0)
         
     return all_df
+
