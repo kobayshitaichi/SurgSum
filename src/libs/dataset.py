@@ -8,6 +8,7 @@ from albumentations.pytorch import ToTensorV2
 from sklearn.utils import class_weight
 import os
 import pandas as pd
+import random
 
 __all__ = ["get_dataloader"]
 
@@ -20,16 +21,22 @@ class ExtractorDataset(torch.utils.data.Dataset):
         self.df = df
         if self.stage != 'test':
             self.df = self.df[self.df["stage"] == self.stage]
-        self.df = self.df[self.df.phase != 'irrelevant']
-        self.df = self.df[self.df.phase != 'others']
+            self.df = self.df[self.df.phase != 'irrelevant']
+            self.df = self.df[self.df.phase != 'others']
+
         self.config = config
         self.class_labels = self.get_labels()
         self.df['y'] = self.df.phase.map(lambda x: int(self.class_labels[x]))
+        if self.stage == 'test':
+            self.df['y'] = 1
         y = torch.tensor(list(self.df.y))
-        self.phase_weights = torch.tensor(class_weight.compute_class_weight(class_weight ='balanced', 
-                                                               classes=np.unique(y), 
-                                                               y =y.numpy()), device=self.config.devices,
-                                          dtype=torch.float)
+        if self.stage != 'test':
+            self.phase_weights = torch.tensor(class_weight.compute_class_weight(class_weight ='balanced', 
+                                                                classes=np.unique(y), 
+                                                                y =y.numpy()), device=self.config.devices,
+                                            dtype=torch.float)
+        else:
+            self.phase_weogjts = torch.ones((6))
 
     def __getitem__(self, index):
         row = self.df.iloc[index]
@@ -41,9 +48,6 @@ class ExtractorDataset(torch.utils.data.Dataset):
         label = torch.tensor(row.y)
 
         return img.float(), label
-
-        
-
 
     def __len__(self):
         return len(self.df)
@@ -92,15 +96,51 @@ class ExtractorDataset(torch.utils.data.Dataset):
         transforms.append(ToTensorV2(p=1))
 
         return A.Compose(transforms)
+
+class RIFDataset(torch.utils.data.Dataset):
+    def __init__(self, config, stage="train"):
+        self.stage = stage
+        self.config = config
+        self.data_dir = self.config.feats_dir
+        train_vid_ids = [0,1,2]
+        val_vid_ids = [3]
+        feature_path = os.path.join('../result',self.data_dir)
+        self.fe_df = pd.read_csv(os.path.join(feature_path,'processed_df.csv'))
+        self.features = np.load(os.path.join(feature_path,'features.npy'))
+        self.gts = self.fe_df.phase.map(lambda x: 0 if x=='irrelevant' else 1).values
+        
+        if self.stage=='train':
+            self.vid_ids = train_vid_ids
+        else:
+            self.vid_ids = val_vid_ids
+            
+        self.df = self.get_df()   
+
+    def __getitem__(self, index):
+        row = self.df.iloc[index]
+        start = row.start_idx
+        end = row.end_idx
+        
+        features = torch.Tensor(self.features[start:end])
+        gts = torch.Tensor(self.gts[start:end])
+        mask = torch.ones(2,end-start)
+
+        return features, gts, mask
+
+    def __len__(self):
+        return len(self.df)
     
-import torch
-from PIL import Image
-import numpy as np
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
-from sklearn.utils import class_weight
-import os
-import pandas as pd
+    def get_df(self):
+        df = pd.DataFrame({"video_idx":self.vid_ids})
+        start = []
+        end = []
+        split = []
+        for i in self.vid_ids:
+            start.append(self.fe_df[self.fe_df.video_idx==i].index[0])
+            end.append(self.fe_df[self.fe_df.video_idx==i].index[-1] + 1)
+        df['start_idx'] = start
+        df['end_idx'] = end
+        return df    
 
 class SumDataset(torch.utils.data.Dataset):
     def __init__(self, config, stage="train"):
@@ -118,9 +158,7 @@ class SumDataset(torch.utils.data.Dataset):
         else:
             self.vid_ids = val_vid_ids
             
-        self.df = self.get_df()
-        
-        
+        self.df = self.get_df()   
 
     def __getitem__(self, index):
         row = self.df.iloc[index]
@@ -128,7 +166,7 @@ class SumDataset(torch.utils.data.Dataset):
         end = row.end_idx
         
         features = torch.Tensor(self.features[start:end])
-        gts = torch.Tensor(self.gts[start:end])
+        gts = torch.Tensor((self.gts[start:end]+1)/2)
 
         return features, gts
 

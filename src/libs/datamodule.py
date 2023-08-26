@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 import os
 import pandas as pd
 
-from .dataset import ExtractorDataset, SumDataset
+from .dataset import ExtractorDataset, RIFDataset, SumDataset
 
 from logging import getLogger
 
@@ -64,6 +64,50 @@ class ExtractorDataModule(pl.LightningDataModule):
             pin_memory=True
         )
 
+class RIFDataModule(pl.LightningDataModule):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+
+    def setup(self, stage=None):
+        # Assign train/val datasets for use in dataloaders
+        if stage == "fit" or stage is None:
+            self.train_data = RIFDataset(stage="train", config = self.config)
+            self.val_data = RIFDataset(stage="val", config = self.config)
+            self.test_data = RIFDataset(stage="test", config = self.config)
+
+            logger.info(f"train data: {self.train_data.__len__()}")
+            logger.info(f"val data: {self.val_data.__len__()}")
+            logger.info("datamodule setup done")
+
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.train_data,
+            batch_size=1,
+            num_workers=4,
+            shuffle=False,
+            pin_memory=True,
+        )
+
+    def val_dataloader(self):
+        return DataLoader(
+            self.val_data, 
+            batch_size=1, 
+            num_workers=4, 
+            shuffle=False,
+            pin_memory=True
+        )
+        
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_data, 
+            batch_size=1, 
+            num_workers=4, 
+            shuffle=False,
+            pin_memory=True
+        )
+
 class SumDataModule(pl.LightningDataModule):
     def __init__(self, config):
         super().__init__()
@@ -107,3 +151,4 @@ class SumDataModule(pl.LightningDataModule):
             shuffle=False,
             pin_memory=True
         )
+        

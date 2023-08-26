@@ -24,6 +24,12 @@ def get_criterion(
     elif loss_fn == "mse":
         criterion = nn.MSELoss()
     
+    elif loss_fn == 'mae':
+        criterion = nn.L1Loss()
+    
+    elif loss_fn  == 'asf_loss':
+        criterion = ASFLoss(config.out_features)
+    
 
     else:
         message = "loss function not found"
@@ -83,3 +89,18 @@ def focal_loss(input,target,weight,gamma):
     p = torch.exp(-input_values)
     loss = (1 - p) ** gamma * input_values
     return loss.mean()
+
+class ASFLoss(nn.Module):
+    def __init__(self, num_classes=7):
+        super(ASFLoss, self).__init__()
+        self.n_classes = num_classes  
+
+    def forward(self, input, target, mask):
+        loss = 0
+        for p in input:
+            loss += nn.CrossEntropyLoss(p.transpose(2, 1).contiguous().view(-1, self.n_classes), target.view(-1))
+            loss += 0.15 * torch.mean(torch.clamp(
+                nn.MSELoss(nn.functional.log_softmax(p[:, :, 1:], dim=1), nn.functional.log_softmax(p.detach()[:, :, :-1], dim=1)), min=0,
+                max=16) * mask[:, :, 1:])
+        
+        return loss
