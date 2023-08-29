@@ -100,7 +100,7 @@ class ExtractorLitModule(pl.LightningModule):
         
         return preds, loss, acc, f1
 
-class RIFLitModule(pl.LightningModule):
+class ASFLitModule(pl.LightningModule):
     # ネットワークモジュールなどの定義
     def __init__(self, config, model=None, loss_fn=None):
         super().__init__()
@@ -108,7 +108,7 @@ class RIFLitModule(pl.LightningModule):
         self.model = model
         self.loss_fn = loss_fn
         self.learning_rate = self.config.lr
-        self.features = np.zeros((0,2048))
+        self.gts = np.zeros((0))
         self.preds = np.zeros((0))
         self.init_metrics()
 
@@ -130,9 +130,8 @@ class RIFLitModule(pl.LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
     # ==================================================================
-    def forward(self, batch):
-        imgs = batch
-        stem, preds = self.model(imgs)
+    def forward(self, feats, mask):
+        stem, preds = self.model(feats, mask)
         return stem, preds
 
     def training_step(self, batch, batch_idx):
@@ -163,22 +162,34 @@ class RIFLitModule(pl.LightningModule):
     
     def test_step(self, batch, batch_idx):
         with torch.no_grad():
-            imgs, labels = batch
-            stem, preds = self.model(imgs)
+            feats, labels, mask = batch
+            feats = feats.transpose(2,1)
+
+            outputs = self.model(feats, mask)
+            preds = outputs.data[-1]
             preds = F.softmax(preds)
             preds = torch.argmax(preds, dim=1)
-        logger.info(self.features.shape)
+            
+        self.gts = np.concatenate([self.gts, labels.cpu().detach().numpy()],0)
+        self.preds = np.concatenate([self.preds, np.asarray(preds.cpu()).squeeze()],0)
+        logger.info(self.gts.shape)
         logger.info(self.preds.shape)
-        self.features = np.concatenate([self.features,stem.cpu().detach().numpy()],0)
-        self.preds = np.concatenate([self.preds,np.asarray(preds.cpu()).squeeze()],0)
 
 
     def _shared_step(self, batch):
         feats, labels, mask = batch
+        feats = feats.transpose(2,1)
+
         outputs = self.model(feats, mask)
         preds = outputs.data[-1]
-        
-        loss = self.loss_fn(outputs, labels, mask)
+
+        # loss = self.loss_fn(outputs, labels, mask)
+        loss = 0
+        for p in outputs:
+            loss += torch.nn.functional.cross_entropy(p.transpose(2, 1).contiguous().view(-1,self.config.out_features), labels.view(-1))
+            loss += 0.15 * torch.mean(torch.clamp(
+                torch.nn.functional.mse_loss(F.log_softmax(p[:, :, 1:], dim=1), F.log_softmax(p.detach()[:, :, :-1], dim=1), reduction='none'), min=0,
+                max=16) * mask[:, :, 1:])
 
         acc = self.acc_phase(preds, labels)
         f1 = self.f1_phase(preds, labels)

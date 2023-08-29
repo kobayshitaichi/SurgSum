@@ -48,7 +48,7 @@ class Config:
 
     devices : int = 1
 
-    callbacks = ["ckpt", "timer", "lr_monitor"]#["ckpt", "prog_bar", "lr_monitor", "timer"]
+    callbacks = ["ckpt", "timer"]#["ckpt", "prog_bar", "lr_monitor", "timer"]
     
     monitor : str = 'val_acc'
     

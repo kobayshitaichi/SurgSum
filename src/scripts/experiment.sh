@@ -4,7 +4,7 @@ python utils/make_config.py --batch_size 128 128 --out_features 6 6 --lr 0.0001 
 files="../result/*"
 for filepath in $files; do
     if [ -d $filepath ] ; then
-        flag="${filepath}/final_models.ckpt"
+        flag="${filepath}/final_model.ckpt"
         if [ -e $flag ] ; then
             continue
         fi

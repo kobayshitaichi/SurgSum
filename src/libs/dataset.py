@@ -23,6 +23,9 @@ class ExtractorDataset(torch.utils.data.Dataset):
             self.df = self.df[self.df["stage"] == self.stage]
             self.df = self.df[self.df.phase != 'irrelevant']
             self.df = self.df[self.df.phase != 'others']
+        else:
+            drop_target = self.df.index[(self.df.video_idx>4) &  ((self.df.phase == 'irrelevant') | (self.df.phase == 'others'))]
+            self.df = self.df.drop(drop_target).reset_index(drop=True)
 
         self.config = config
         self.class_labels = self.get_labels()
@@ -97,18 +100,30 @@ class ExtractorDataset(torch.utils.data.Dataset):
 
         return A.Compose(transforms)
 
-class RIFDataset(torch.utils.data.Dataset):
+class ASFDataset(torch.utils.data.Dataset):
     def __init__(self, config, stage="train"):
         self.stage = stage
         self.config = config
         self.data_dir = self.config.feats_dir
-        train_vid_ids = [0,1,2]
-        val_vid_ids = [3]
+        train_vid_ids = [5,6,7,8,9,10,11]
+        val_vid_ids = [12,13,14]
         feature_path = os.path.join('../result',self.data_dir)
         self.fe_df = pd.read_csv(os.path.join(feature_path,'processed_df.csv'))
-        self.features = np.load(os.path.join(feature_path,'features.npy'))
-        self.gts = self.fe_df.phase.map(lambda x: 0 if x=='irrelevant' else 1).values
         
+        self.features = np.load(os.path.join(feature_path,'features.npy'))
+
+        action_dict = {
+            'design': 0,
+            'anesthesia': 1,
+            'incision': 2,
+            'hemostasis': 3,
+            'dissection': 4,
+            'closure': 5,
+            'others': 6,
+            'irrelevant': 7
+        }
+        self.gts = self.fe_df.phase.map(lambda x: int(action_dict[x])).values
+
         if self.stage=='train':
             self.vid_ids = train_vid_ids
         else:
@@ -120,12 +135,12 @@ class RIFDataset(torch.utils.data.Dataset):
         row = self.df.iloc[index]
         start = row.start_idx
         end = row.end_idx
-        
+
         features = torch.Tensor(self.features[start:end])
         gts = torch.Tensor(self.gts[start:end])
-        mask = torch.ones(2,end-start)
+        mask = torch.ones(self.config.out_features,end-start)
 
-        return features, gts, mask
+        return features, gts.to(torch.int64), mask
 
     def __len__(self):
         return len(self.df)
@@ -135,12 +150,14 @@ class RIFDataset(torch.utils.data.Dataset):
         start = []
         end = []
         split = []
-        for i in self.vid_ids:
+        for i in sorted(self.vid_ids):
             start.append(self.fe_df[self.fe_df.video_idx==i].index[0])
             end.append(self.fe_df[self.fe_df.video_idx==i].index[-1] + 1)
         df['start_idx'] = start
         df['end_idx'] = end
         return df    
+
+
 
 class SumDataset(torch.utils.data.Dataset):
     def __init__(self, config, stage="train"):
@@ -183,6 +200,14 @@ class SumDataset(torch.utils.data.Dataset):
             end.append(self.fe_df[self.fe_df.video_idx==i].index[-1] + 1)
         df['start_idx'] = start
         df['end_idx'] = end
+        
         return df
 
+    def get_labels(self):
+        class_labels = {}
+        for i,label in enumerate(self.df.phase.unique()):
+            class_labels[label] = i
+            if self.stage == "train":
+                logger.info(f"{label}: {i}")
+        return class_labels
 

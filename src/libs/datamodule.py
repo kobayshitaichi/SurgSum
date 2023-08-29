@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 import os
 import pandas as pd
 
-from .dataset import ExtractorDataset, RIFDataset, SumDataset
+from .dataset import ExtractorDataset, ASFDataset, SumDataset
 
 from logging import getLogger
 
@@ -34,6 +34,7 @@ class ExtractorDataModule(pl.LightningDataModule):
             logger.info(f"weight: {self.phase_weight}")
             logger.info(f"train data: {self.train_data.__len__()}")
             logger.info(f"val data: {self.val_data.__len__()}")
+            logger.info(f"test data: {self.test_data.__len__()}")
             logger.info("datamodule setup done")
 
 
@@ -64,7 +65,7 @@ class ExtractorDataModule(pl.LightningDataModule):
             pin_memory=True
         )
 
-class RIFDataModule(pl.LightningDataModule):
+class ASFDataModule(pl.LightningDataModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -72,9 +73,9 @@ class RIFDataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage is None:
-            self.train_data = RIFDataset(stage="train", config = self.config)
-            self.val_data = RIFDataset(stage="val", config = self.config)
-            self.test_data = RIFDataset(stage="test", config = self.config)
+            self.train_data = ASFDataset(stage="train", config = self.config)
+            self.val_data = ASFDataset(stage="val", config = self.config)
+            self.test_data = ASFDataset(stage="val", config = self.config)
 
             logger.info(f"train data: {self.train_data.__len__()}")
             logger.info(f"val data: {self.val_data.__len__()}")

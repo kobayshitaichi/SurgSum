@@ -94,11 +94,13 @@ class ASFLoss(nn.Module):
     def __init__(self, num_classes=7):
         super(ASFLoss, self).__init__()
         self.n_classes = num_classes  
+        self.ce = nn.CrossEntropyLoss()
 
     def forward(self, input, target, mask):
         loss = 0
+
         for p in input:
-            loss += nn.CrossEntropyLoss(p.transpose(2, 1).contiguous().view(-1, self.n_classes), target.view(-1))
+            loss += self.ce(p.transpose(2, 1).contiguous().view(-1, self.n_classes), target.view(-1))
             loss += 0.15 * torch.mean(torch.clamp(
                 nn.MSELoss(nn.functional.log_softmax(p[:, :, 1:], dim=1), nn.functional.log_softmax(p.detach()[:, :, :-1], dim=1)), min=0,
                 max=16) * mask[:, :, 1:])
