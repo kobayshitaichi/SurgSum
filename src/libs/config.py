@@ -12,23 +12,11 @@ logger = getLogger(__name__)
 
 @dataclasses.dataclass(frozen=False)
 class Config:
-    # dataset関連
-    dataset_dir : str = "../SummarizationDataset"
-    
-    feats_dir : str = "fps_sampling=1-batch_size=128-img_size=224-out_features=6-lr=0.0001-loss_fn=ib_focal-max_epoch=20-aug_ver=1"
-    
-    fps_sampling : int = 1
-    
-    fps_sampling_test : int = 1
-    
-    val_vid_idx = [1,2,3,4,5]
-    
-    batch_size: int = 1024
-    
-    img_size : int = 256
     
     # model関連
     model_name: str = "resnet50d"
+    
+    channel_masking_rate : float = 0.3
     
     out_features : int = 6
     
@@ -48,7 +36,7 @@ class Config:
 
     devices : int = 1
 
-    callbacks = ["ckpt", "timer"]#["ckpt", "prog_bar", "lr_monitor", "timer"]
+    callbacks = ["ckpt", "timer"]#["ckpt", "prog_bar", "timer"]
     
     monitor : str = 'val_acc'
     
@@ -60,8 +48,28 @@ class Config:
     
     aug_ver : int = 1
     
-    mode : str = 'fit' #extract, fit_extract
+    module : str = 'WR' # WR: Workflow Recognition, RIF : remove irrelevant frame
     
+    mode : str = 'fit' #extract, fit_extract
+
+    # dataset関連
+    dataset_dir : str = "../SummarizationDataset"
+    
+    feats_dir : str = "fps_sampling=1-batch_size=128-img_size=224-out_features=6-lr=0.0001-loss_fn=ib_focal-max_epoch=20-aug_ver=1"
+    
+    RIF_dir : str = "model_name=asformer-lr=0.03-max_epoch=50-module=RIF"
+    
+    fps_sampling : int = 1
+    
+    val_vid_idx = [0,1,2,3,4,5]
+    
+    test_vid_idx : int = 0
+    
+    batch_size: int = 1024
+    
+    img_size : int = 256
+
+    fps_sampling_test : int = 1
 
     def __post_init__(self) -> None:
         self._type_check()

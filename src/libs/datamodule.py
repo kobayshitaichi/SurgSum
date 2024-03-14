@@ -31,11 +31,11 @@ class ExtractorDataModule(pl.LightningDataModule):
             self.test_data = ExtractorDataset(df=self.df, stage="test", config = self.config)
             self.phase_weight = self.train_data.phase_weights
             
-            logger.info(f"weight: {self.phase_weight}")
-            logger.info(f"train data: {self.train_data.__len__()}")
-            logger.info(f"val data: {self.val_data.__len__()}")
-            logger.info(f"test data: {self.test_data.__len__()}")
-            logger.info("datamodule setup done")
+        logger.info(f"weight: {self.phase_weight}")
+        logger.info(f"train data: {self.train_data.__len__()}")
+        logger.info(f"val data: {self.val_data.__len__()}")
+        logger.info(f"test data: {self.test_data.__len__()}")
+        logger.info("datamodule setup done")
 
 
     def train_dataloader(self):
@@ -60,7 +60,7 @@ class ExtractorDataModule(pl.LightningDataModule):
         return DataLoader(
             self.test_data, 
             batch_size=self.config.batch_size, 
-            num_workers=4, 
+            num_workers=1, 
             shuffle=False,
             pin_memory=True
         )
@@ -75,10 +75,11 @@ class ASFDataModule(pl.LightningDataModule):
         if stage == "fit" or stage is None:
             self.train_data = ASFDataset(stage="train", config = self.config)
             self.val_data = ASFDataset(stage="val", config = self.config)
-            self.test_data = ASFDataset(stage="val", config = self.config)
+            self.test_data = ASFDataset(stage="test", config = self.config)
 
             logger.info(f"train data: {self.train_data.__len__()}")
             logger.info(f"val data: {self.val_data.__len__()}")
+            logger.info(f"test data: {self.test_data.__len__()}")
             logger.info("datamodule setup done")
 
 
@@ -104,7 +105,7 @@ class ASFDataModule(pl.LightningDataModule):
         return DataLoader(
             self.test_data, 
             batch_size=1, 
-            num_workers=4, 
+            num_workers=0, 
             shuffle=False,
             pin_memory=True
         )

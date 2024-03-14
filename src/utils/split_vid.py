@@ -26,7 +26,7 @@ def videos_to_imgs(output_path='',input_path='',pattern='*mp4',fps=30,start_vide
             continue
         out_folder.mkdir(exist_ok=True)
         os.system(
-            f'ffmpeg -i {vid_path} -vf "scale=250:250, fps=30" {out_folder/file_name}_%6d.png '
+            f'ffmpeg -i {vid_path} -vf "scale=640:360, fps=30" {out_folder/file_name}_%6d.png '
         )
         print("Done extractin: {}".format(i+1))
 

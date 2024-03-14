@@ -123,6 +123,7 @@ def main():
         np.save(os.path.join(result_path,'outputs.npy'), lm.outputs)
         np.save(os.path.join(result_path,'weight.npy'), lm.weight)
         np.save(os.path.join(result_path,'gts.npy'), lm.gts)
+        
     else:
         trainer.fit(model=lm, datamodule=dm)
         trainer.test(model=lm, datamodule=dm)

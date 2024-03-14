@@ -5,6 +5,7 @@ import timm
 
 from .asformer import ASFormer
 from .summarizer import PGL_SUM
+from .tcn import MultiStageModel
 
 
 __all__ = ["get_model"]
@@ -12,7 +13,9 @@ __all__ = ["get_model"]
 model_names = [
     "resnet50d",
     "asformer",
-    "pgl_sum"
+    "asformer_2",
+    "pgl_sum",
+    "mstcn",
 ]
 logger = getLogger(__name__)
 
@@ -30,12 +33,17 @@ def get_model(config) -> nn.Module:
         model = OneHeadResNet50(config)
         
     elif name == 'asformer':
-        model = ASFormer(3,10,2,2,64,2048,config.out_features,0.3)
+        model = ASFormer(3,10,2,2,64,2048,config.out_features,config.channel_masking_rate)
+
+    elif name == 'asformer_2':
+        model = ASFormer(2,10,2,2,64,2048,config.out_features,config.channel_masking_rate)
         
     elif name == 'pgl_sum':
         model = PGL_SUM(input_size=2048, output_size=2048, pos_enc='absolute', heads=8)
+    
+    elif name == 'mstcn':
+        model = MultiStageModel(num_stages=4, num_layers=10, num_f_maps=64, dim=2048, num_classes=config.out_features)
         
-
     return model
 
 class OneHeadResNet50(nn.Module):

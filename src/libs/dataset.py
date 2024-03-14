@@ -24,7 +24,7 @@ class ExtractorDataset(torch.utils.data.Dataset):
             self.df = self.df[self.df.phase != 'irrelevant']
             self.df = self.df[self.df.phase != 'others']
         else:
-            drop_target = self.df.index[(self.df.video_idx>4) &  ((self.df.phase == 'irrelevant') | (self.df.phase == 'others'))]
+            drop_target = self.df.index[(self.df.video_idx>5) &  ((self.df.phase == 'irrelevant') | (self.df.phase == 'others'))]
             self.df = self.df.drop(drop_target).reset_index(drop=True)
 
         self.config = config
@@ -65,7 +65,7 @@ class ExtractorDataset(torch.utils.data.Dataset):
 
     def transform(self):
         transforms = [
-                A.Normalize(mean=(0,0,0), std=(1,1,1)),
+                A.Normalize(mean=(0.5,0.5,0.5), std=(0.5,0.5,0.5)),
                 A.Resize(self.config.img_size, self.config.img_size)
         ]
         
@@ -105,11 +105,9 @@ class ASFDataset(torch.utils.data.Dataset):
         self.stage = stage
         self.config = config
         self.data_dir = self.config.feats_dir
-        train_vid_ids = [5,6,7,8,9,10,11]
-        val_vid_ids = [12,13,14]
+
         feature_path = os.path.join('../result',self.data_dir)
         self.fe_df = pd.read_csv(os.path.join(feature_path,'processed_df.csv'))
-        
         self.features = np.load(os.path.join(feature_path,'features.npy'))
 
         action_dict = {
@@ -122,12 +120,29 @@ class ASFDataset(torch.utils.data.Dataset):
             'others': 6,
             'irrelevant': 7
         }
-        self.gts = self.fe_df.phase.map(lambda x: int(action_dict[x])).values
+        
+        if self.config.module == 'WR':
+            train_vid_ids = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+            val_vid_ids = [train_vid_ids.pop(self.config.test_vid_idx)]
+            test_vid_ids = val_vid_ids
+            self.gts = self.fe_df.phase.map(lambda x: int(action_dict[x])).values
+            
+        else:
+            train_vid_ids = [0,1,2,3,4,5]
+            val_vid_ids = [train_vid_ids.pop(self.config.test_vid_idx)]
+            test_vid_ids = val_vid_ids
+            self.gts = self.fe_df.field.map(lambda x: int(bool(x))).values
 
         if self.stage=='train':
             self.vid_ids = train_vid_ids
-        else:
+        elif self.stage=='val':
             self.vid_ids = val_vid_ids
+        else:
+            self.vid_ids = test_vid_ids
+            if self.config.module=='WR':
+                self.fe_df = self.fe_df[self.fe_df.video_idx==self.vid_ids[0]]
+                # self.fe_df['RIF_preds'] = np.load(os.path.join('../result',self.config.RIF_dir,'preds.npy'))
+                # self.fe_df = self.fe_df[self.fe_df.RIF_preds==1].reset_index(drop=True)
             
         self.df = self.get_df()   
 
@@ -157,15 +172,13 @@ class ASFDataset(torch.utils.data.Dataset):
         df['end_idx'] = end
         return df    
 
-
-
 class SumDataset(torch.utils.data.Dataset):
     def __init__(self, config, stage="train"):
         self.stage = stage
         self.config = config
         self.data_dir = self.config.feats_dir
-        train_vid_ids = [0,1,2]
-        val_vid_ids = [3]
+        train_vid_ids = [0,1,2,3,4,5]
+        val_vid_ids = [train_vid_ids.pop(self.config.test_vid_idx)]
         feature_path = os.path.join('../result',self.data_dir)
         self.fe_df = pd.read_csv(os.path.join(feature_path,'processed_df.csv'))
         self.features = np.load(os.path.join(feature_path,'features.npy'))
@@ -175,7 +188,7 @@ class SumDataset(torch.utils.data.Dataset):
         else:
             self.vid_ids = val_vid_ids
             
-        self.df = self.get_df()   
+        self.df = self.get_df() 
 
     def __getitem__(self, index):
         row = self.df.iloc[index]
@@ -210,4 +223,3 @@ class SumDataset(torch.utils.data.Dataset):
             if self.stage == "train":
                 logger.info(f"{label}: {i}")
         return class_labels
-

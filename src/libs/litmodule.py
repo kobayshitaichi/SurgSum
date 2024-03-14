@@ -108,7 +108,6 @@ class ASFLitModule(pl.LightningModule):
         self.model = model
         self.loss_fn = loss_fn
         self.learning_rate = self.config.lr
-        self.gts = np.zeros((0))
         self.preds = np.zeros((0))
         self.init_metrics()
 
@@ -167,12 +166,10 @@ class ASFLitModule(pl.LightningModule):
 
             outputs = self.model(feats, mask)
             preds = outputs.data[-1]
-            preds = F.softmax(preds)
+            preds = F.softmax(preds, dim=1)
             preds = torch.argmax(preds, dim=1)
             
-        self.gts = np.concatenate([self.gts, labels.cpu().detach().numpy()],0)
         self.preds = np.concatenate([self.preds, np.asarray(preds.cpu()).squeeze()],0)
-        logger.info(self.gts.shape)
         logger.info(self.preds.shape)
 
 
